@@ -9,7 +9,7 @@ class Pipeline:
     def __init__(self):
         self.name = "AIM - N8N Agent Pipeline"
         self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
-        self.api_key = "n8n_api_916429371c7ac1ca76e3eeaf18b1fd8278472c2a3f676a7cd46b0e18e72091d6aa1bc66fad846154"                                    # Insert your actual API key here
+        self.api_key = "__n8n_BLANK_VALUE_e5362baf-c777-4d57-a609-6eaf1f9e87f6"                                    # Insert your actual API key here
         self.verify_ssl = True
         self.debug = False
         # Please note that N8N do not support stream reponses

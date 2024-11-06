@@ -2,14 +2,10 @@ from typing import List, Union, Generator, Iterator, Optional
 from pprint import pprint
 import requests, json, warnings
 
-# Uncomment to disable SSL verification warnings if needed.
-# warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-
 class Pipeline:
     def __init__(self):
         self.name = "AIM - N8N Agent Pipeline2"
-        self.api_url = "https://n8n.autointmind.com/webhook/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
-        self.api_key = "__n8n_BLANK_VALUE_e5362baf-c777-4d57-a609-6eaf1f9e87f6"                                    # Insert your actual API key here
+        self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
         self.verify_ssl = True
         self.debug = False
         # Please note that N8N do not support stream reponses
@@ -52,28 +48,13 @@ class Pipeline:
             print(f"pipe: {__name__} - received message from user: {user_message}")
         
         # This function triggers the workflow using the specified API.
-        headers = {
-            'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json'
-        }
-        data = {
-            "inputs": {"prompt": user_message},
-            "user": body["user"]["email"]
-        }
-
-        response = requests.post(self.api_url, headers=headers, json=data, verify=self.verify_ssl)
+        response = requests.get(self.api_url)
         if response.status_code == 200:
             # Process and yield each chunk from the response
             try:
-                for line in response.iter_lines():
-                    if line:
-                        # Decode each line assuming UTF-8 encoding and directly parse it as JSON
-                        json_data = json.loads(line.decode('utf-8'))
-                        # Check if 'output' exists in json_data and yield it
-                        if 'output' in json_data:
-                            yield json_data['output']
+                return response.json()
             except json.JSONDecodeError as e:
                 print(f"Failed to parse JSON from line. Error: {str(e)}")
-                yield "Error in JSON parsing."
+                return "Error in JSON parsing."
         else:
-            yield f"Workflow request failed with status code: {response.status_code}"
+            return f"Workflow request failed with status code: {response.status_code}"

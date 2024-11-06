@@ -7,9 +7,9 @@ import requests, json, warnings
 
 class Pipeline:
     def __init__(self):
-        self.name = "111ent Pipeline"
-        self.api_url = "https://n8n.host/webhook/myflow"     # Set correct hostname
-        self.api_key = ""                                    # Insert your actual API key here
+        self.name = "AIM n8n - 222test Pipeline"
+        self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5" # Set correct hostname
+    #    self.api_key = ""                                    # Insert your actual API key here
         self.verify_ssl = True
         self.debug = False
         # Please note that N8N do not support stream reponses
@@ -53,7 +53,7 @@ class Pipeline:
         
         # This function triggers the workflow using the specified API.
         headers = {
-            'Authorization': f'Bearer {self.api_key}',
+        #    'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json'
         }
         data = {
@@ -61,7 +61,7 @@ class Pipeline:
             "user": body["user"]["email"]
         }
 
-        response = requests.post(self.api_url, headers=headers, json=data, verify=self.verify_ssl)
+        response = requests.get(self.api_url, headers=headers,  verify=self.verify_ssl)
         if response.status_code == 200:
             # Process and yield each chunk from the response
             try:

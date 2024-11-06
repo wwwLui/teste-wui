@@ -4,8 +4,8 @@ import json
 
 class Pipeline:
     def __init__(self):
-        self.name = "AIM - N8N Agent Pipeline2"
-        self.api_url = "https://n8n.autointmind.com/webhook/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"  # Set correct hostname
+        self.name = "AIM - N8N Agent Pipeline2-teste"
+        self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"  # Set correct hostname
         self.verify_ssl = True
         self.debug = False
 

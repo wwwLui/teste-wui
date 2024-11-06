@@ -1,77 +1,108 @@
-from typing import List, Union, Generator, Iterator, Optional
+me responda como especialista em n8n.. open webui
 
-from pprint import pprint
+title: n8n Pipe Function
+author: Cole Medin
+author_url: https://www.youtube.com/@ColeMedin
+version: 0.1.0
+
+from typing import Optional, Callable, Awaitable
+from pydantic import BaseModel, Field
+import os
+import time
 import requests
-import json
-import warnings
 
-warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+class Pipe:
+    class Valves(BaseModel):
+        n8n_url: str = Field(
+           default = "https://n8n.autointmind.com/webhook/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"   
+        )
 
-class Pipeline:
     def __init__(self):
-        self.name = "AIM - N8N teste1"
-        self.api_url = "https://n8n.autointmind.com/webhook/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
-        # self.api_key = ""                                    # Insert your actual API key here
-        self.verify_ssl = True
-        self.debug = False
-        # Please note that N8N do not support stream reponses
+        self.type = "pipe"
+        self.id = "Pipeline_123"
+        self.name = "Pipeline teste"
+        self.valves = self.Valves()
+        self.last_emit_time = 0
 
-    async def on_startup(self):
-        """
-        This is an asynchronous method called when the pipeline starts.
-        It prints a message indicating that the on_startup method has been called.
-        :return: None
-        """
-        print(f"on_startup: {__name__}")
-        pass
-    
-    async def on_shutdown(self): 
-        """
-        This is an asynchronous method called when the pipeline shuts down.
-        It prints a message indicating that the on_shutdown method has been called.
-        :return: None
-        """
-        print(f"on_shutdown: {__name__}")
-        pass
+    async def emit_status(
+        self,
+        __event_emitter__: Callable[[dict], Awaitable[None]],
+        level: str,
+        message: str,
+        done: bool,
+    ):
+        current_time = time.time()
+        if (
+            __event_emitter__
+            and self.valves.enable_status_indicator
+            and (
+                current_time - self.last_emit_time >= self.valves.emit_interval or done
+            )
+        ):
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "status": "complete" if done else "in_progress",
+                        "level": level,
+                        "description": message,
+                        "done": done,
+                    },
+                }
+            )
+            self.last_emit_time = current_time
 
-    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        """
-        This is an asynchronous method that handles incoming data.
-        It returns the incoming data.
-        :param body: The data coming into the pipeline.
-        :param user: Optional user data.
-        :return: The incoming data.
-        """
-        return body
-    
-    async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        """
-        This is an asynchronous method that handles outgoing data.
-        It returns the outgoing data.
-        :param body: The data going out of the pipeline.
-        :param user: Optional user data.
-        :return: The outgoing data.
-        """
-        return body
+    async def pipe(
+        self,
+        body: dict,
+        __user__: Optional[dict] = None,
+        __event_emitter__: Callable[[dict], Awaitable[None]] = None,
+        __event_call__: Callable[[dict], Awaitable[dict]] = None,
+    ) -> Optional[dict]:
+        await self.emit_status(
+            __event_emitter__,
+            "info",
+            "/Calling Pipeline teste...",
+            False,
+        )
 
-    def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
-        """
-        This method is a pipeline controller.
-        It makes an HTTP GET request to the N8N API and returns the response.
-        :param user_message: User message.
-        :param model_id: Model ID.
-        :param messages: Messages.
-        :param body: The data coming into the pipeline.
-        :return: The response from the N8N API or an error message.
-        """
-        print(f"pipe: {__name__}")
-       
-        headers = {
-            # 'Authorization': f'Bearer {self.api_key}',  # inserted your actual API key here
-            'Content-Type': 'application/json'
-        }
-        response = requests.get(self.api_url, headers=headers, verify=self.verify_ssl)
-        if response.status_code == 200:
-            return response.content
+        messages = body.get("messages", [])
+
+        if messages:
+            question = messages[-1]["content"]
+            try:
+                headers = {
+                    "Content-Type": "application/json"
+                }
+                response = requests.get(
+                    self.valves.n8n_url,
+                    headers=headers,
+                    params={"sessionId": f"{__user__['id']} - {messages[0]['content'].split('Prompt: ')[-1][:100]}"}
+                )
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    raise Exception(f"Error: {response.status_code} - {response.text}")
+            except Exception as e:
+                await self.emit_status(
+                    __event_emitter__,
+                    "error",
+                    f"Error during sequence execution: {str(e)}",
+                    True,
+                )
+                return {"error": str(e)}
         else:
-            return f"Workflow request failed with status code: {response.status_code}"
+            await self.emit_status(__event_emitter__, "error", "No messages found in the request body", True)
+            body["messages"].append(
+                {
+                    "role": "assistant",
+                    "content": "No messages found in the request body",
+                }
+            )
+
+        await self.emit_status(__event_emitter__, "info", "Complete", True)
+        return None
+
+
+
+

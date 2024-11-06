@@ -7,7 +7,7 @@ import requests, json, warnings
 
 class Pipeline:
     def __init__(self):
-        self.name = "N8N Agent Pipeline"
+        self.name = "111ent Pipeline"
         self.api_url = "https://n8n.host/webhook/myflow"     # Set correct hostname
         self.api_key = ""                                    # Insert your actual API key here
         self.verify_ssl = True

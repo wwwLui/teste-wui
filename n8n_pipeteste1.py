@@ -39,7 +39,7 @@ class Pipeline:
             print(f"pipe: {__name__} - received message from user: {user_message}")
 
         try:
-            response = requests.get(self.api_url, timeout=10)
+            response = requests.get(self.api_url, timeout=3000)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:

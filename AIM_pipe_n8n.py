@@ -1,72 +1,128 @@
-from typing import List, Union, Generator, Iterator, Optional
-from pprint import pprint
-import requests, json, warnings
-# Uncomment to disable SSL verification warnings if needed.
-# warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-class Pipeline:
+"""
+title: n8n Pipe Function
+author: Cole Medin
+author_url: https://www.youtube.com/@ColeMedin
+version: 0.1.0
+
+This module defines a Pipe class that utilizes an N8N workflow for an Agent
+"""
+
+from typing import Optional, Callable, Awaitable
+from pydantic import BaseModel, Field
+import os
+import time
+import requests
+
+
+class Pipe:
+    class Valves(BaseModel):
+        n8n_url: str = Field(
+            default="https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"
+        )
+      # n8n_bearer_token: str = Field(default="...")
+        input_field: str = Field(default="chatInput")
+        response_field: str = Field(default="output")
+        emit_interval: float = Field(
+            default=2.0, description="Interval in seconds between status emissions"
+        )
+        enable_status_indicator: bool = Field(
+            default=True, description="Enable or disable status indicator emissions"
+        )
+
     def __init__(self):
-        self.name = "AIM - N8N Agent Pipeline"
-        self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
-       # self.api_key = "n8n_api_916429371c7ac1ca76e3eeaf18b1fd8278472c2a3f676a7cd46b0e18e72091d6aa1bc66fad846154"                                    # Insert your actual API key here
-        self.verify_ssl = True
-        self.debug = False
-        # Please note that N8N do not support stream reponses
-    async def on_startup(self):
-        # This function is called when the server is started.
-        print(f"on_startup: {__name__}")
+        self.type = "pipe"
+        self.id = "n8n_pipe"
+        self.name = "N8N Pipe"
+        self.valves = self.Valves()
+        self.last_emit_time = 0
         pass
-    
-    async def on_shutdown(self): 
-        # This function is called when the server is shutdown.
-        print(f"on_shutdown: {__name__}")
-        pass
-    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        # This function is called before the OpenAI API request is made. You can modify the form data before it is sent to the OpenAI API.
-        print(f"inlet: {__name__}")
-        if self.debug:
-            print(f"inlet: {__name__} - body:")
-            pprint(body)
-            print(f"inlet: {__name__} - user:")
-            pprint(user)
-        return body
-    async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        # This function is called after the OpenAI API response is completed. You can modify the messages after they are received from the OpenAI API.
-        print(f"outlet: {__name__}")
-        if self.debug:
-            print(f"outlet: {__name__} - body:")
-            pprint(body)
-            print(f"outlet: {__name__} - user:")
-            pprint(user)
-        return body
-    def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
-        # This is where you can add your custom pipelines like RAG.
-        print(f"pipe: {__name__}")
-        
-        if self.debug:
-            print(f"pipe: {__name__} - received message from user: {user_message}")
-        
-        # This function triggers the workflow using the specified API.
-        headers = {
-           # 'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json'
-        }
-        data = {
-            "inputs": {"prompt": user_message},
-            "user": body["user"]["email"]
-        }
-        response = requests.post(self.api_url, headers=headers, json=data, verify=self.verify_ssl)
-        if response.status_code == 200:
-            # Process and yield each chunk from the response
+
+    async def emit_status(
+        self,
+        __event_emitter__: Callable[[dict], Awaitable[None]],
+        level: str,
+        message: str,
+        done: bool,
+    ):
+        current_time = time.time()
+        if (
+            __event_emitter__
+            and self.valves.enable_status_indicator
+            and (
+                current_time - self.last_emit_time >= self.valves.emit_interval or done
+            )
+        ):
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "status": "complete" if done else "in_progress",
+                        "level": level,
+                        "description": message,
+                        "done": done,
+                    },
+                }
+            )
+            self.last_emit_time = current_time
+
+    async def pipe(
+        self,
+        body: dict,
+        __user__: Optional[dict] = None,
+        __event_emitter__: Callable[[dict], Awaitable[None]] = None,
+        __event_call__: Callable[[dict], Awaitable[dict]] = None,
+    ) -> Optional[dict]:
+        await self.emit_status(
+            __event_emitter__, "info", "/Calling N8N Workflow...", False
+        )
+
+        messages = body.get("messages", [])
+
+        # Verify a message is available
+        if messages:
+            question = messages[-1]["content"]
+            if "Prompt: " in question:
+                question = question.split("Prompt: ")[-1]
             try:
-                for line in response.iter_lines():
-                    if line:
-                        # Decode each line assuming UTF-8 encoding and directly parse it as JSON
-                        json_data = json.loads(line.decode('utf-8'))
-                        # Check if 'output' exists in json_data and yield it
-                        if 'output' in json_data:
-                            yield json_data['output']
-            except json.JSONDecodeError as e:
-                print(f"Failed to parse JSON from line. Error: {str(e)}")
-                yield "Error in JSON parsing."
+                # Invoke N8N workflow
+                headers = {
+                  #  "Authorization": f"Bearer {self.valves.n8n_bearer_token}",
+                    "Content-Type": "application/json",
+                }
+                payload = {"sessionId": f"{__user__['id']} - {messages[0]['content'].split('Prompt: ')[-1][:100]}"}
+                payload[self.valves.input_field] = question
+                response = requests.post(
+                    self.valves.n8n_url, json=payload, headers=headers
+                )
+                if response.status_code == 200:
+                    n8n_response = response.json()[self.valves.response_field]
+                else:
+                    raise Exception(f"Error: {response.status_code} - {response.text}")
+
+                # Set assitant message with chain reply
+                body["messages"].append({"role": "assistant", "content": n8n_response})
+            except Exception as e:
+                await self.emit_status(
+                    __event_emitter__,
+                    "error",
+                    f"Error during sequence execution: {str(e)}",
+                    True,
+                )
+                return {"error": str(e)}
+        # If no message is available alert user
         else:
-            yield f"Workflow request failed with status code: {response.status_code}"
+            await self.emit_status(
+                __event_emitter__,
+                "error",
+                "No messages found in the request body",
+                True,
+            )
+            body["messages"].append(
+                {
+                    "role": "assistant",
+                    "content": "No messages found in the request body",
+                }
+            )
+
+        await self.emit_status(__event_emitter__, "info", "Complete", True)
+        return n8n_response

@@ -8,7 +8,7 @@ import requests, json, warnings
 class Pipeline:
     def __init__(self):
         self.name = "AIM - N8N Agent Pipeline"
-        self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
+        self.api_url = "https://n8n.autointmind.com/webhook/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
         self.api_key = "__n8n_BLANK_VALUE_e5362baf-c777-4d57-a609-6eaf1f9e87f6"                                    # Insert your actual API key here
         self.verify_ssl = True
         self.debug = False

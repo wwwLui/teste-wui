@@ -7,9 +7,9 @@ import requests, json, warnings
 
 class Pipeline:
     def __init__(self):
-        self.name = "AIM n8n - 222test Pipeline"
-        self.api_url = "https://n8n.autointmind.com/webhook/62f78f96-6cae-4cfd-985d-27d2da8fd8b5" # Set correct hostname
-    #    self.api_key = ""                                    # Insert your actual API key here
+        self.name = "AIM - N8N teste1"
+        self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
+#        self.api_key = ""                                    # Insert your actual API key here
         self.verify_ssl = True
         self.debug = False
         # Please note that N8N do not support stream reponses
@@ -53,7 +53,7 @@ class Pipeline:
         
         # This function triggers the workflow using the specified API.
         headers = {
-        #    'Authorization': f'Bearer {self.api_key}',
+      #      'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json'
         }
         data = {
@@ -61,17 +61,11 @@ class Pipeline:
             "user": body["user"]["email"]
         }
 
-        response = requests.get(self.api_url, headers=headers,  verify=self.verify_ssl)
+        response = requests.get(self.api_url, headers=headers, verify=self.verify_ssl)
         if response.status_code == 200:
-            # Process and yield each chunk from the response
+            response.text
             try:
-                for line in response.iter_lines():
-                    if line:
-                        # Decode each line assuming UTF-8 encoding and directly parse it as JSON
-                        json_data = json.loads(line.decode('utf-8'))
-                        # Check if 'output' exists in json_data and yield it
-                        if 'output' in json_data:
-                            yield json_data['output']
+                yield   response.text
             except json.JSONDecodeError as e:
                 print(f"Failed to parse JSON from line. Error: {str(e)}")
                 yield "Error in JSON parsing."

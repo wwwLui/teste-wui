@@ -1,41 +1,22 @@
-"""
-title: n8n Pipe Function
-author: Cole Medin
-author_url: https://www.youtube.com/@ColeMedin
-version: 0.1.0
-
-This module defines a Pipe class that utilizes an N8N workflow for an Agent
-"""
-
+from typing import List, Union, Generator, Iterator, Optional
+from pprint import pprint
+import requests, json, warnings
 from typing import Optional, Callable, Awaitable
 from pydantic import BaseModel, Field
 import os
 import time
 import requests
+# Uncomment to disable SSL verification warnings if needed.
+# warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
-
-class Pipe:
-    class Valves(BaseModel):
-        n8n_url: str = Field(
-            default="https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"
-        )
-      # n8n_bearer_token: str = Field(default="...")
-        input_field: str = Field(default="chatInput")
-        response_field: str = Field(default="output")
-        emit_interval: float = Field(
-            default=2.0, description="Interval in seconds between status emissions"
-        )
-        enable_status_indicator: bool = Field(
-            default=True, description="Enable or disable status indicator emissions"
-        )
-
+class Pipeline:
     def __init__(self):
-        self.type = "pipe"
-        self.id = "n8n_pipe"
-        self.name = "N8N Pipe"
-        self.valves = self.Valves()
-        self.last_emit_time = 0
-        pass
+        self.name = "N8N Agent Pipeline"
+        self.api_url = "https://n8n.autointmind.com/webhook-test/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"     # Set correct hostname
+       # self.api_key = ""                                    # Insert your actual API key here
+        self.verify_ssl = True
+        self.debug = False
+        # Please note that N8N do not support stream reponses
 
     async def emit_status(
         self,

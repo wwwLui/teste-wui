@@ -44,7 +44,7 @@ class Pipeline:
             pprint(user)
         return body
 
-    def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
+    async def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
         response = requests.get(self.api_url, verify=self.verify_ssl)
         if response.status_code == 200:
             try:

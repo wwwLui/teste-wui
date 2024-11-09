@@ -7,7 +7,7 @@ import requests, json, warnings
 
 class Pipeline:
     def __init__(self):
-        self.name = "aim2-4"
+        self.name = "aim2-5"
         self.api_url = "https://n8n.autointmind.com/webhook-test/get-test"     # Set correct hostname
        # self.api_key = ""                                    # Insert your actual API key here
         self.verify_ssl = True
@@ -46,7 +46,7 @@ class Pipeline:
 
     def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
         response = requests.get(self.api_url, verify=self.verify_ssl)
-        if response.status_code == 200:
-            return response.text
-        else:
-            return f"Deu erro no workflow! =>> {response.status_code}"
+       # if response.status_code == 200:
+        return response.text
+        #else:
+        #   return f"Deu erro no workflow! =>> {response.status_code}"

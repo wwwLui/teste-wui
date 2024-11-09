@@ -7,7 +7,7 @@ import requests, json, warnings
 
 class Pipeline:
     def __init__(self):
-        self.name = "aim2-n8ntx"
+        self.name = "aim2-3"
         self.api_url = "https://n8n.autointmind.com/webhook-test/get-test"     # Set correct hostname
        # self.api_key = ""                                    # Insert your actual API key here
         self.verify_ssl = True

@@ -1,10 +1,3 @@
-me responda como especialista em n8n.. open webui
-
-title: n8n Pipe Function
-author: Cole Medin
-author_url: https://www.youtube.com/@ColeMedin
-version: 0.1.0
-
 from typing import Optional, Callable, Awaitable
 from pydantic import BaseModel, Field
 import os
@@ -14,7 +7,7 @@ import requests
 class Pipe:
     class Valves(BaseModel):
         n8n_url: str = Field(
-           default = "https://n8n.autointmind.com/webhook/62f78f96-6cae-4cfd-985d-27d2da8fd8b5"   
+           default = "https://n8n.autointmind.com/webhook-test/get-test"   
         )
 
     def __init__(self):

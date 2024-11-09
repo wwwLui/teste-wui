@@ -56,22 +56,20 @@ class Pipeline:
             #'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json'
         }
-        data = {
-            "inputs": {"prompt": user_message},
-            "user": body["user"]["email"]
-        }
+      #  data = {
+      #      "inputs": {"prompt": user_message},
+       #     "user": body["user"]["email"]
+    #    }
 
-        response = requests.post(self.api_url, headers=headers, json=data, verify=self.verify_ssl)
+        response = requests.get(self.api_url, verify=self.verify_ssl)
+        print("======================>")
+        print(response)
         if response.status_code == 200:
-            # Process and yield each chunk from the response
             try:
                 for line in response.iter_lines():
                     if line:
-                        # Decode each line assuming UTF-8 encoding and directly parse it as JSON
-                        json_data = json.loads(line.decode('utf-8'))
-                        # Check if 'output' exists in json_data and yield it
-                        if 'output' in json_data:
-                            yield json_data['output']
+                        # Decodifica cada linha como string e retorna diretamente
+                        yield line.decode('utf-8')
             except json.JSONDecodeError as e:
                 print(f"Failed to parse JSON from line. Error: {str(e)}")
                 yield "Error in JSON parsing."

@@ -1,101 +1,79 @@
-from typing import List, Union, Generator, Iterator, Any
-from schemas import OpenAIChatMessage
-import requests
-import json
-from urllib.parse import urlparse
-from pydantic import BaseModel
-import os
-import uuid
+from typing import List, Union, Generator, Iterator, Optional
+from pprint import pprint
+import requests, json, warnings
 
-class N8NAPIClient:
-    def __init__(self, N8N_API_BASE_URL: str) -> None:
-        if not N8N_API_BASE_URL.startswith(('http://', 'https://')):
-            N8N_API_BASE_URL = 'https://' + N8N_API_BASE_URL
-        self.n8n_base_url = N8N_API_BASE_URL
-     #   self.n8n_api_key = N8N_API_KEY
-
-    def get_workflow(self, workflow_id: str) -> dict[str, Any]:
-        return self.GET(path=f'/api/v1/workflows/{workflow_id}')
-
-    def get_execution(self, workflow_id: str, execution_id: str):
-        return self.GET(path=f'/api/v1/executions/{execution_id}')
-
-    def trigger_webhook(self, webhook_id: str, input: str):
-        return self.POST(path=f'/webhook-test/{webhook_id}', data=input)
-
-    def chat(self, webhook: str, session_id: str, input: str):
-        return self.POST(path=f'/webhook/{webhook}/chat', data=json.dumps({
-            "action": "sendMessage",
-            "sessionId": session_id,
-            "chatInput": input,
-        }))
-
-    def POST(self, path: str, data: str) -> None:
-        headers = {
-            'content-type': 'application/json',
-           # "x-n8n-api-key": self.n8n_api_key,
-           # "cookie": f'n8n-auth={self.n8n_api_key}'
-        }
-        url = f'{self.n8n_base_url}{"//" if not path.startswith("/") else ""}{path}'
-
-        # Validate URL
-        parsed_url = urlparse(url)
-        if not all([parsed_url.scheme, parsed_url.netloc]):
-            raise ValueError(f"Invalid URL: {url}. Make sure it includes a scheme (http:// or https://) and a domain.")
-
-        resp = requests.post(url, headers=headers, data=data)
-        resp.raise_for_status()
-        return resp.json()
-
-    def GET(self, path: str) -> None:
-        headers = {
-            #"x-n8n-api-key": self.n8n_api_key,
-           # "cookie": f'n8n-auth={self.n8n_api_key}'
-        }
-        url = f'{self.n8n_base_url}{"//" if not path.startswith("/") else ""}{path}'
-
-        # Validate URL
-        parsed_url = urlparse(url)
-        if not all([parsed_url.scheme, parsed_url.netloc]):
-            raise ValueError(f"Invalid URL: {url}. Make sure it includes a scheme (http:// or https://) and a domain.")
-
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
-
+# Uncomment to disable SSL verification warnings if needed.
+# warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 class Pipeline:
-    class Values(BaseModel):
-        N8N_API_BASE_URL: str = ""
-    # N8N_API_KEY: str = ""
-       # N8N_WORKFLOW_ID: str = ""
-
     def __init__(self):
-        self.name = "AIM - N8n teste"
-        self.values = self.Values(
-            **{
-                'N8N_API_BASE_URL': os.getenv("N8N_API_BASE_URL", "https://n8n.autointmind.com/webhook-test/get-test/"),
-                #'N8N_API_KEY': os.getenv("N8N_API_KEY", "n8n_api_hj123712863kj123y781237612--------------"),
-               # 'N8N_WORKFLOW_ID': os.getenv("N8N_WORKFLOW_ID", "Kasdfasdf121232"),
-            }
-        )
-        self.n8n = N8NAPIClient(N8N_API_BASE_URL=self.values.N8N_API_BASE_URL)
+        self.name = "aim2-n8nteste"
+        self.api_url = "https://n8n.autointmind.com/webhook-test/get-test"     # Set correct hostname
+       # self.api_key = ""                                    # Insert your actual API key here
+        self.verify_ssl = True
+        self.debug = False
+        # Please note that N8N do not support stream reponses
 
     async def on_startup(self):
-        print(f"on_startup:{self.name}")
+        # This function is called when the server is started.
+        print(f"on_startup: {__name__}")
+        pass
+    
+    async def on_shutdown(self): 
+        # This function is called when the server is shutdown.
+        print(f"on_shutdown: {__name__}")
         pass
 
-    async def on_shutdown(self):
-        print(f"on_shutdown:{self.name}")
-        pass
+    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        # This function is called before the OpenAI API request is made. You can modify the form data before it is sent to the OpenAI API.
+        print(f"inlet: {__name__}")
+        if self.debug:
+            print(f"inlet: {__name__} - body:")
+            pprint(body)
+            print(f"inlet: {__name__} - user:")
+            pprint(user)
+        return body
 
-    def pipe(
-        self, user_message: str, model_id: str, messages: List[dict], body: dict
-    ) -> Union[str, Generator, Iterator]:
-        session_id = str(uuid.uuid4())  
+    async def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        # This function is called after the OpenAI API response is completed. You can modify the messages after they are received from the OpenAI API.
+        print(f"outlet: {__name__}")
+        if self.debug:
+            print(f"outlet: {__name__} - body:")
+            pprint(body)
+            print(f"outlet: {__name__} - user:")
+            pprint(user)
+        return body
+
+    def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
+        # This is where you can add your custom pipelines like RAG.
+        print(f"pipe: {__name__}")
         
-        # Trigger the n8n webhook and pass user input
-        response = self.n8n.chat(webhook='https://n8n.autointmind.com/webhook-test/get-test', session_id=session_id, input=user_message)
+        if self.debug:
+            print(f"pipe: {__name__} - received message from user: {user_message}")
         
-        # Return the output from the webhook
-        return response['output']
+        # This function triggers the workflow using the specified API.
+        headers = {
+            #'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "inputs": {"prompt": user_message},
+            "user": body["user"]["email"]
+        }
+
+        response = requests.post(self.api_url, headers=headers, json=data, verify=self.verify_ssl)
+        if response.status_code == 200:
+            # Process and yield each chunk from the response
+            try:
+                for line in response.iter_lines():
+                    if line:
+                        # Decode each line assuming UTF-8 encoding and directly parse it as JSON
+                        json_data = json.loads(line.decode('utf-8'))
+                        # Check if 'output' exists in json_data and yield it
+                        if 'output' in json_data:
+                            yield json_data['output']
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse JSON from line. Error: {str(e)}")
+                yield "Error in JSON parsing."
+        else:
+            yield f"Workflow request failed with status code: {response.status_code}"
